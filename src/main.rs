@@ -24,15 +24,22 @@ fn main() {
     let mut urls: Vec<String> = Vec::new(); 
     let file = File::open(wordlist).expect("Failed to open file");
     let file = BufReader::new(file);
-    //for i in file.lines() {
-    //    // Look this up noob
-   //    if let Ok(s) = i{
-    //        println!("{}",s);
-   //    };
-   // }
-    request(&target_host).expect("Connection could not be established.");
-    // Look up the "Ok(())"
-    //Ok(());
+    for i in file.lines() {
+        // Look this up noob
+       if let Ok(s) = i{
+            urls.push(s);
+       }
+    }
+
+    for path in urls {
+        let target = format!("{}/{}", &target_host, &path);
+        //let target = url_encode(&target);
+        if let Err(err) = request(&target) {
+            println!("Error with {}: {}",&target,err);
+        }
+        // Look up the "Ok(())"
+        //Ok(());
+    }
 }
 
 fn request (t: &str) -> Result<(), isahc::Error> {
@@ -40,12 +47,12 @@ fn request (t: &str) -> Result<(), isahc::Error> {
     // Must be `mut` so we can read the response body.
     let response = isahc::get(t)?;
 
-    // TESTING!!!
+    // Handling the response by checking Status Code
     let status_response = response.status();
     if status_response.is_success(){
-        println!("Request was successful with code {}!",status_response);
-    } else {
-        println!("Not 200 I guess? Status Code: {}",status_response);
+        println!("[X]Success | {} | Status Code: {}",t,status_response);
+    } else if status_response.is_redirection() {
+        println!("[x]Redirect | {} | Status Code: {}",t,status_response);
     }
 
     Ok(())
