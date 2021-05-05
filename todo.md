@@ -7,3 +7,4 @@
 - coloring
 - verbose mode
 - handling timeouts
+- handling unknown certs

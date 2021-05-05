@@ -27,7 +27,7 @@ fn main() {
         0 => user_agent = user_agent,
         1 => user_agent = args.value_of("uagent").unwrap(),
         _ => println!(
-            "Something went wrong witht the User-Agent.\nPlease try again."
+            "Something went wrong with the User-Agent.\nPlease try again."
         ),
     }
 
@@ -58,11 +58,9 @@ fn main() {
 
     // Making the request
     for path in urls {
-        let user_agent = format!("User-Agent: {}",user_agent);
         let target = format!("{}/{}{}", &target_host, &path,&ext);
- 
         if let Err(err) = request(&target,&user_agent) {
-            println!("Error with {}: {}",&target,err);
+            println!("Error with {} | {}",&target,err);
         }
         // Look up the "Ok(())"
         //Ok(());
@@ -73,7 +71,8 @@ fn request (t: &str,ua: &str ) -> Result<(), isahc::Error> {
     // Send a HEAD request and wait for the response.
     // We use the HEAD method because we don't need the body in this case
     let response = Request::head(t)
-        .body(ua)?
+        .header("User-Agent",ua)
+        .body(())?
         .send()?;
     // Handling the response by checking Status Code
     let status_response = response.status();
