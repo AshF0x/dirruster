@@ -1,10 +1,11 @@
 # Stuff I Still Need Want To Implement
 ---
-- extensions
-- url sanitizer
+- extensions (kinda)
+- url sanitizer (check if there is a good crate we could use)
 - async
 - spider crawler (SpaceMoehre)
-- coloring
 - verbose mode
 - handling timeouts
 - handling unknown certs
+- output (90%)
+- follow redirect
