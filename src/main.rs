@@ -8,9 +8,11 @@ use std::path::Path;
 use ansi_term::Colour::Fixed;
 use indicatif::ProgressBar;
 use console::Term;
+use futures::StreamExt;
+use futures::future::ok;
 
-
-fn main() {
+#[tokio::main]
+async fn main() {
     let args = App::new("dirruster")
         .version("0.1")
         .about("Project about learning how to write a directory bruteforcer in Rust")
@@ -45,7 +47,7 @@ fn main() {
 
 
     let out_path = Path::new("output.txt");
-    let out_file = match File::create(&out_path) {
+    let mut out_file = match File::create(&out_path) {
         Err(err) => panic!("Could not create output file | Reason: {}",err),
         Ok(file) => file,
     }; 
@@ -57,28 +59,36 @@ fn main() {
     println!("------------------------------");
 
     // Opening the file
-    let mut urls: Vec<String> = Vec::new();
+    //let mut urls: Vec<String> = Vec::new();
     let file = File::open(wordlist).expect("Failed to open file");
     let file = BufReader::new(file);
-    for i in file.lines() {
-        // Look this up noob
-        if let Ok(s) = i {
-            urls.push(s);
-        }
-    }
     let bar = ProgressBar::new(1000);
-    // Making the request
-    for path in urls {
+    prober(file, &target_host,&user_agent, &ext, &mut out_file).await;
+    // tokio::fs::File
+}
 
-        let target = format!("{}/{}{}", &target_host, &path, &ext);
+async fn prober(file: BufReader<File>,target_host: &str,user_agent: &str,ext: &str,out_file: &mut File){
+    let requests = file.lines() //Result<String, Error>
+        .filter_map(|line_result| line_result.ok())
+        .map(|line|format!("{}/{}{}", &target_host,line,ext)) //String
+        .filter_map(|fetch| Request::head(fetch).header("User-Agent", user_agent).body(()).ok()); // Request
+        
+        futures::stream::iter(requests) // Stream of Requests
+        .map(|request|request.send_async())
+        .buffer_unordered(256) //Response
+        .filter_map(|response| async { response.ok()})
+        .for_each(|response| {
+            let uri = response.effective_uri()
+            .map(|uri|uri.to_string())
+            .unwrap_or("".to_string());
 
-        if let Err(err) = request(&target, &user_agent, &term, &out_file) {
-            println!("Error with {} | {}\n", &target, err);
-        }
-        bar.inc(1);
-        let _ = term.move_cursor_up(1);
-        //let _ = term.clear_line();
-    }
+            println!("[{}] {:?}",response.status().as_u16(),uri);
+            // match out_file.write_all(uri.as_bytes()) {
+            //     Err(err) => panic!("Error while writing to file: {}", err),
+            //     Ok(_) => (),
+            // }
+            futures::future::ready(())
+        }).await;
 }
 
 fn request(t: &str, ua: &str,term: &Term, mut out_file: &File) -> Result<(), isahc::Error> {
